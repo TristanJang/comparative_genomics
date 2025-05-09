@@ -1,0 +1,51 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/grp/valafar/data/depot/assembly/south_africa/isolates_contaminant_free.txt').read().split('\n') if len(i) > 0]
+
+
+rule All:
+    input:
+        expand(grouphome + "/data/depot/assembly/south_africa/variants/{isolate}_annotated.vcf", isolate=ISOLATES)
+    
+rule zipfa:
+    input:
+        grouphome + "/resources/H37Rv.fasta"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.fasta.gz"
+    shell:
+        """bgzip -c {input} > {output}"""
+
+rule zipgtf:
+    input:
+        grouphome + "/resources/H37Rv.gtf"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz"
+    shell:
+        """cat {input} | sed "s/NC_000962.3/1/" | bgzip > {output}"""
+
+rule index:
+    input:
+        grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz.tbi"
+    params:"-p gff"
+    wrapper:"v1.25.0/bio/tabix/index"
+
+rule vep:
+    input:
+        input1=grouphome + "/data/depot/assembly/south_africa/variants/{isolate}_norm.vcf",
+    	input2=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz",
+    	input3=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.fasta.gz",
+	    input4=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz.tbi"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}_annotated_unfiltered.vcf"
+    shell:
+        """vep -i {input.input1} -gtf {input.input2} --fa {input.input3} --vcf -o {output}"""
+
+rule filter:
+    input:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}_annotated_unfiltered.vcf"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}_annotated.vcf"
+    shell:
+        """cat {input} | vep-filter-impact > {output}"""
