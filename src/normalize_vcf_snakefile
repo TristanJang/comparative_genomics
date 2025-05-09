@@ -1,0 +1,53 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/grp/valafar/data/depot/assembly/south_africa/isolates_not_including_B09.txt').read().split('\n') if len(i) > 0]
+
+rule All:
+    input:
+        expand(grouphome + "/data/depot/assembly/south_africa/{isolate}/mummer/out.snps", isolate = ISOLATES),
+        expand(grouphome+ "/data/depot/assembly/south_africa/variants/{isolate}.vcf", isolate = ISOLATES),
+        expand(grouphome+ "/data/depot/assembly/south_africa/variants/{isolate}_norm.vcf",isolate = ISOLATES)
+#dnadiff for each isolate:
+rule mummer:
+    input:
+        input1= grouphome + "/data/depot/assembly/south_africa/genomes/{isolate}.fasta",
+        input2= grouphome + "/data/genomes/H37Rv-NCBI.fasta"
+    output:
+        output1=grouphome + "/data/depot/assembly/south_africa/{isolate}/mummer/out.snps",
+        output2=directory(grouphome + "/data/depot/assembly/south_africa/{isolate}/mummer")
+    shell:
+       """ cd {output.output2} && dnadiff {input.input2} {input.input1} """
+
+rule snps2vcf:
+    input:
+        input1= grouphome + "/data/depot/assembly/south_africa/{isolate}/mummer/out.snps",
+        input2= grouphome + "/data/genomes/H37Rv-NCBI.fasta"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.vcf"
+    shell:
+        """/home/mahmadijeshvag6700/git_repos/tools/utils/mummer-extras/src/mummer-snps2vcf {input.input1} --reference {input.input2} > {output}"""
+rule zip_vcf:
+    input:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.vcf"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.vcf.gz"
+    shell:
+        """bgzip < {input} > {output} """
+rule index_zip_file:
+    input:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.vcf.gz"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.vcf.gz.tbi"
+    shell:
+        """bcftools index -t {input}"""
+rule normalize_vcf:
+    input:
+        input1=grouphome + "/data/genomes/H37Rv-NCBI.fasta",
+        input2=grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.vcf.gz",
+        input3=grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.vcf.gz.tbi"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/{isolate}_norm.vcf"
+    shell:
+        """bcftools norm -f {input.input1} {input.input2} > {output}"""
+
+
