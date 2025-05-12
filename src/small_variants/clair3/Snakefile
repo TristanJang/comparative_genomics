@@ -1,0 +1,38 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/grp/valafar/data/depot/assembly/south_africa/isolates_new_contam_free.txt').read().split('\n') if len(i) > 0]
+
+rule All:
+    input:
+        expand(grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}/merge_output.vcf.gz",isolate = ISOLATES),
+        expand(grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}_clair3.vcf.gz", isolate= ISOLATES),
+        expand(grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}_clair3.vcf", isolate= ISOLATES)
+
+
+rule clair3:
+    input:
+        input1=grouphome + "/data/depot/assembly/south_africa/alignments/H37Rv/{isolate}_Rv_aligned.bam",
+        input2=grouphome + "/resources/H37Rv.fasta"
+        #input2=grouphome + "/data/depot/assembly/south_africa/genomes/{isolate}.fasta"
+    output:
+        output1 = directory(grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}"),
+        output2 = grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}/merge_output.vcf.gz"
+    shell:
+        """singularity exec -B /grp/valafar/ clair3_latest.sif /opt/bin/run_clair3.sh --bam_fn={input.input1} --ref_fn={input.input2} --haploid_sensitive --threads=8 --platform="hifi" --model_path="/opt/models/hifi_revio" --output={output.output1}"""
+
+rule copy_and_rename:
+    input:
+        grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}/merge_output.vcf.gz"
+    output:
+        grouphome+ "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}_clair3.vcf.gz"
+    shell:
+        "cp {input} {output}"
+
+
+rule unzip:
+    input:
+        grouphome+ "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}_clair3.vcf.gz"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_H37Rv/{isolate}_clair3.vcf"
+    shell:
+        "gunzip {input}"
