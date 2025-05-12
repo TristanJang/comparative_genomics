@@ -1,0 +1,75 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/grp/valafar/data/depot/assembly/south_africa/isolates_new_bsl.txt').read().split('\n') if len(i) > 0]
+
+
+rule All:
+    input:
+        #expand(grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf", isolate = ISOLATES),
+        #expand(grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}_sorted.gtf", isolate = ISOLATES),
+        #expand(grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf.gz", isolate = ISOLATES),
+        #expand(grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf.gz.tbi", isolate = ISOLATES),
+        expand(grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_bsl/vep_annotation/{isolate}_clair3_unfiltered_annotated.vcf", isolate=ISOLATES),
+        expand(grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_bsl/vep_annotation/{isolate}_clair3_annotated.vcf", isolate=ISOLATES)
+
+#rule gff2gtf:
+    #input:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gff"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf"
+    #shell:
+        #"""agat_convert_sp_gff2gtf.pl --gff {input} -o {output}"""
+
+#rule sort:
+    #input:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}_sorted.gtf"
+    #shell:
+        #"""sort -k4,4n {input} > {output}"""
+
+#rule zipfa:
+    #input:
+        #grouphome + "/data/depot/assembly/south_africa/genomes/{isolate}.fasta"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/variants/{isolate}.fasta.gz"
+    #shell:
+        #"""bgzip -c {input} > {output}"""
+
+#rule zipgtf:
+    #input:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}_sorted.gtf"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf.gz"
+    #shell:
+        #"""cat {input} | bgzip > {output}"""
+
+#rule index:
+    #input:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf.gz"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf.gz.tbi"
+    #params:"-p gff"
+    #wrapper:"v1.25.0/bio/tabix/index"
+
+rule vep:
+    input:
+        input1=grouphome + "/data/depot/assembly/south_africa/variants/int/{isolate}_clair3_selected_ref_bsl.vcf",
+    	#input2=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz",
+    	#input3=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.fasta.gz",
+	    #input4=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz.tbi"
+	    input2=grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf.gz",
+    	input3=grouphome + "/data/depot/assembly/south_africa/genomes/{isolate}.fasta.gz",
+	    input4=grouphome + "/data/depot/assembly/south_africa/annotation/{isolate}.gtf.gz.tbi"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_bsl/vep_annotation/{isolate}_clair3_unfiltered_annotated.vcf"
+    shell:
+        """vep -i {input.input1} -gtf {input.input2} --fa {input.input3} --vcf -o {output}"""
+
+rule filter:
+    input:
+        grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_bsl/vep_annotation/{isolate}_clair3_unfiltered_annotated.vcf"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/variants/het_clair3_ref_bsl/vep_annotation/{isolate}_clair3_annotated.vcf"
+    shell:
+        """cat {input} | vep-filter-impact > {output}"""
