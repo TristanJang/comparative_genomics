@@ -1,0 +1,29 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/home/tjang8858/assembly/pacbio_sra_single_contig.txt').read().split('\n') if len(i) > 0]
+
+
+rule All:
+    input:
+        expand(grouphome + "/data/depot/public-genomes-reference/pacbio/structural_variants/{isolate}_annotated_unfiltered.vcf", isolate=ISOLATES),
+        expand(grouphome + "/data/depot/public-genomes-reference/pacbio/structural_variants/{isolate}_annotated.vcf", isolate = ISOLATES)
+
+rule vep:
+    input:
+        input1=grouphome + "/data/depot/public-genomes-reference/pacbio/structural_variants/{isolate}_sniffles.vcf",
+    	input2=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz",
+    	input3=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.fasta.gz",
+	    input4=grouphome + "/data/depot/assembly/south_africa/variants/H37Rv.gtf.gz.tbi"
+    output:
+        grouphome + "/data/depot/public-genomes-reference/pacbio/structural_variants/{isolate}_annotated_unfiltered.vcf"
+    shell:
+        """singularity exec -B /grp/valafar/ ../../../vep.sif \
+        vep -i {input.input1} -gtf {input.input2} --fa {input.input3} --vcf -o {output}"""
+
+rule filter:
+    input:
+        grouphome + "/data/depot/public-genomes-reference/pacbio/structural_variants/{isolate}_annotated_unfiltered.vcf"
+    output:
+        grouphome + "/data/depot/public-genomes-reference/pacbio/structural_variants/{isolate}_annotated.vcf"
+    shell:
+        """cat {input} | vep-filter-impact > {output}"""
