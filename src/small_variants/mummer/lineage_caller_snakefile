@@ -1,0 +1,15 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/home/tjang8858/assembly/pacbio_sra_complete_final.txt').read().split('\n') if len(i) > 0]
+
+rule All:
+    input:
+        expand(grouphome + "/data/depot/assembly/sra_pacbio/lineage/{isolate}_lineage.tsv", isolate = ISOLATES),
+
+rule lineage_caller:
+    input:
+        grouphome + "/data/depot/assembly/sra_pacbio/variants/{isolate}.vcf",
+    output:
+        grouphome + "/data/depot/assembly/sra_pacbio/lineage/{isolate}_lineage.tsv"
+    shell:
+       """fast-lineage-caller {input} --out {output}"""
