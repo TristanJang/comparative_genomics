@@ -1,0 +1,36 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/grp/valafar/data/depot/assembly/south_africa/alignments/H37Rv/isolates.txt').read().split('\n') if len(i) > 0]
+
+rule All:
+    input:
+        #expand(grouphome + "/data/depot/assembly/south_africa/{isolate}/mummer/out.snps", isolate = ISOLATES),
+        #expand(grouphome+ "/data/depot/assembly/south_africa/variants/{isolate}.vcf", isolate = ISOLATES),
+        #expand(grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined.vcf.gz", isolate=ISOLATES),
+        #expand(grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined.vcf.gz.tbi", isolate = ISOLATES)
+        expand(grouphome+ "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined_norm.vcf",isolate = ISOLATES)
+#rule zip_vcf:
+    #input:
+        #grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined_svs.vcf"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined.vcf.gz"
+    #shell:
+        #"""bgzip < {input} > {output} """
+#rule index_zip_file:
+    #input:
+        #grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined.vcf.gz"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined.vcf.gz.tbi"
+    #shell:
+        #"""bcftools index -t {input}"""
+rule normalize_vcf:
+    input:
+        input1=grouphome + "/resources/H37Rv.fasta",
+        input2=grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined.vcf.gz",
+        input3=grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined.vcf.gz.tbi"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/structural_variants/ref_H37Rv/{isolate}_combined_norm.vcf"
+    shell:
+        """bcftools norm -c w -f {input.input1} {input.input2} > {output}"""
+
+
