@@ -1,0 +1,69 @@
+#requirements to run:
+#takes alignment files (.bam) generated for comparison of interest 
+#conda activate svs, with txt file for each isolate to align/call svs
+#note: paths may need to be changed for different runs, also number of cores may need to changed
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/grp/valafar/data/depot/assembly/south_africa/isolates_new_contam_free.txt').read().split('\n') if len(i) > 0]
+
+rule All:
+    input:
+        # expand(grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_pbsv.vcf", isolate = ISOLATES),
+        # expand(grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_cutesv.vcf", isolate = ISOLATES),
+        # expand(grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_sniffles.vcf", isolate = ISOLATES),
+        expand(grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_het_combined.vcf", isolate = ISOLATES)
+
+#rule pbsv:
+    #input:
+        #input1 = grouphome + "/data/depot/assembly/south_africa/alignments/self/{isolate}_self_aligned.bam"
+
+    #output:
+        #output1 = grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}.svsig.gz"
+    #conda:
+        #"svs"
+    #shell:
+        #"""pbsv discover {input.input1} {output.output1}"""
+#rule pbsv2:
+    #input:
+        #input1 = grouphome + "/data/depot/assembly/south_africa/genomes/{isolate}.fasta",
+        #input2 = grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}.svsig.gz"
+
+    #output:
+        #output1 = grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_pbsv.vcf"
+    #conda:
+        #"svs"
+    #shell:
+        #"""pbsv call {input.input1} {input.input2} {output.output1}"""
+
+#rule cutesv:
+    #input:
+        #input1 = grouphome + "/data/depot/assembly/south_africa/alignments/self/{isolate}_self_aligned.bam",
+        #input2 = grouphome + "/data/depot/assembly/south_africa/genomes/{isolate}.fasta"
+
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_cutesv.vcf"
+    #conda:
+        #"cutesv"
+    #shell:
+        #"""cuteSV  {input.input1} {input.input2} {output} ./ --max_cluster_bias_INS 1000 --diff_ratio_merging_INS 0.9 --max_cluster_bias_DEL 1000 --diff_ratio_merging_DEL 0.5 --min_support 5"""
+
+#rule sniffles:
+    #input:
+        #input1 = grouphome + "/data/depot/assembly/south_africa/alignments/self/{isolate}_self_aligned.bam",
+        #input2 = grouphome + "/data/depot/assembly/south_africa/genomes/{isolate}.fasta"
+    #output:
+        #grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_sniffles.vcf"
+    #conda:
+        #"sniffles2"
+    #shell:
+        #"""sniffles -i {input.input1} --reference {input.input2} -v {output} --mosaic"""
+#combine vcfs of the 3 tools
+rule combisv:
+    input:
+        input1 = grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_pbsv.vcf",
+        input2 = grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_cutesv.vcf",
+        input3 = grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_sniffles.vcf"
+    output:
+        grouphome + "/data/depot/assembly/south_africa/structural_variants/het_self/{isolate}_het_combined.vcf"
+    shell:
+        """perl combiSV/combiSV2.2.pl -pbsv {input.input1} -sniffles {input.input3} -cutesv {input.input2} -o {output}"""
