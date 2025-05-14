@@ -1,0 +1,18 @@
+import os
+grouphome = os.environ['GROUPHOME']
+ISOLATES = [i for i in open('/home/tjang8858/assembly/nanopore_sra_complete_final.txt').read().split('\n') if len(i) > 0]
+
+rule All:
+    input:
+        expand(grouphome + "/data/depot/public-genomes-reference/nanopore/structural_variants/{isolate}_sniffles.vcf", isolate = ISOLATES)
+
+rule sniffles:
+    input:
+        input1 = grouphome + "/data/depot/public-genomes-reference/nanopore/alignments/{isolate}_Rv_aligned.bam",
+        input2 = grouphome + "/resources/H37Rv.fasta"
+    output:
+        grouphome + "/data/depot/public-genomes-reference/nanopore/structural_variants/{isolate}_sniffles.vcf"
+    conda:
+        "sniffles2"
+    shell:
+        """sniffles -i {input.input1} --reference {input.input2} -v {output} -t 8"""
